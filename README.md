@@ -124,5 +124,3 @@ O servidor estará ativo em: `http://localhost:3300`
 
 Podes utilizar o **Thunder Client** (extensão do VS Code) ou o **Postman** para enviar requisições para os endpoints listados acima enviando corpos em formato `JSON`.
 
-```
-
