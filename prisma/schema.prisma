@@ -1,0 +1,66 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Usuario {
+  id_usuario      Int          @id @default(autoincrement())
+  nome            String
+  email           String       @unique
+  senha           String
+  perfil          String       @default("Gestor Lei do Bem")
+  iniciativas     Iniciativa[] @relation("UsuarioResponsavel")
+
+  @@map("usuario")
+}
+
+model Iniciativa {
+  id_iniciativa          Int          @id @default(autoincrement())
+  nome                   String
+  descricao              String?      @db.Text
+  data_inicio            DateTime     @db.Date
+  data_fim               DateTime     @db.Date
+  status                 String       @default("Cadastrada")
+  area                   String
+  categoria_pd           String
+  nivel_inovacao         String
+  criado_em              DateTime     @default(now())
+  atualizado_em          DateTime     @updatedAt
+  
+  usuario_responsavel_id Int
+  usuario_responsavel    Usuario      @relation("UsuarioResponsavel", fields: [usuario_responsavel_id], references: [id_usuario])
+  
+  dispendios             Dispendio[]
+  timesheets             Timesheet[]
+
+  @@map("iniciativa")
+}
+
+model Dispendio {
+  id_dispendio            Int        @id @default(autoincrement())
+  iniciativa_id           Int
+  iniciativa              Iniciativa @relation(fields: [iniciativa_id], references: [id_iniciativa], onDelete: Cascade)
+  descricao               String     @db.Text
+  valor                   Decimal    @db.Decimal(12, 2)
+  data                    DateTime   @db.Date
+  categoria               String
+  documento_comprobatorio String?
+
+  @@map("dispendio")
+}
+
+model Timesheet {
+  id_timesheet   Int        @id @default(autoincrement())
+  colaborador_id Int
+  iniciativa_id  Int
+  iniciativa     Iniciativa @relation(fields: [iniciativa_id], references: [id_iniciativa], onDelete: Cascade)
+  data           DateTime   @db.Date
+  horas          Decimal    @db.Decimal(5, 2)
+  descricao      String?    @db.Text
+
+  @@map("timesheet")
+}
