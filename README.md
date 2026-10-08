@@ -126,4 +126,3 @@ Podes utilizar o **Thunder Client** (extensão do VS Code) ou o **Postman** para
 
 ```
 
-```
