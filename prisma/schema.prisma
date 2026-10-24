@@ -12,7 +12,7 @@ model Usuario {
   nome            String
   email           String       @unique
   senha           String
-  perfil          String       @default("Gestor Lei do Bem")
+  perfil          String       @default("Analista P&D")
   iniciativas     Iniciativa[] @relation("UsuarioResponsavel")
 
   @@map("usuario")
@@ -20,24 +20,43 @@ model Usuario {
 
 model Iniciativa {
   id_iniciativa          Int          @id @default(autoincrement())
+  codigo                 String       @unique
   nome                   String
   descricao              String?      @db.Text
-  data_inicio            DateTime     @db.Date
-  data_fim               DateTime     @db.Date
-  status                 String       @default("Cadastrada")
-  area                   String
-  categoria_pd           String
-  nivel_inovacao         String
+  classificacao_pd       String
+  score_trl              Int
+  elegibilidade_pct      Decimal      @db.Decimal(5, 2)
+  risco_glosa            String
+  barreira_incerteza     String?      @db.Text
+  cnae                   String?
+  data_inicio            DateTime?    @db.Date
+  data_fim               DateTime?    @db.Date
+  status                 String       @default("Em Avaliação")
   criado_em              DateTime     @default(now())
   atualizado_em          DateTime     @updatedAt
   
   usuario_responsavel_id Int
   usuario_responsavel    Usuario      @relation("UsuarioResponsavel", fields: [usuario_responsavel_id], references: [id_usuario])
   
+  marcos                 MarcoExperimento[]
   dispendios             Dispendio[]
   timesheets             Timesheet[]
 
   @@map("iniciativa")
+}
+
+model MarcoExperimento {
+  id_marco         Int        @id @default(autoincrement())
+  iniciativa_id    Int
+  iniciativa       Iniciativa @relation(fields: [iniciativa_id], references: [id_iniciativa], onDelete: Cascade)
+  titulo           String
+  periodo          String
+  descricao        String     @db.Text
+  status_validacao String     @default("Validado")
+  hash_evidencia   String?
+  tamanho_arquivo  String?
+
+  @@map("marco_experimento")
 }
 
 model Dispendio {
@@ -54,13 +73,17 @@ model Dispendio {
 }
 
 model Timesheet {
-  id_timesheet   Int        @id @default(autoincrement())
-  colaborador_id Int
-  iniciativa_id  Int
-  iniciativa     Iniciativa @relation(fields: [iniciativa_id], references: [id_iniciativa], onDelete: Cascade)
-  data           DateTime   @db.Date
-  horas          Decimal    @db.Decimal(5, 2)
-  descricao      String?    @db.Text
+  id_timesheet     Int        @id @default(autoincrement())
+  colaborador_id   String
+  colaborador_nome String
+  cargo_regime     String
+  iniciativa_id    Int
+  iniciativa       Iniciativa @relation(fields: [iniciativa_id], references: [id_iniciativa], onDelete: Cascade)
+  data             DateTime   @db.Date
+  horas_mes        Int
+  elegivel_pct     Decimal    @db.Decimal(5, 2)
+  custo_apropriado Decimal    @db.Decimal(10, 2)
+  status           String     @default("Aprovado pelo Gestor")
 
   @@map("timesheet")
 }
