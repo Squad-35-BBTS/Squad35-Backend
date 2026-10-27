@@ -1,6 +1,8 @@
 const { Router } = require('express');
 const iniciativaController = require('./controllers/iniciativaController');
 const authController = require('./controllers/authController');
+const marcoController = require('./controllers/marcoController');
+const dispendioController = require('./controllers/dispendioController');
 const authMiddleware = require('./Middleware/authMiddleware');
 
 const routes = Router();
@@ -22,5 +24,9 @@ routes.put('/iniciativas/:id', iniciativaController.update);
 routes.delete('/iniciativas/:id', iniciativaController.delete);
 routes.get('/apuracao/financeira', iniciativaController.getApuraçãoFinanceira);
 routes.get('/relatorios/mcti', iniciativaController.exportarMcti);
+routes.get('/iniciativas/:iniciativaId/marcos', marcoController.listarMarcos);
+routes.post('/iniciativas/:iniciativaId/marcos', marcoController.criarMarco);
+routes.get('/iniciativas/:iniciativaId/dispendios', dispendioController.listarDispendios);
+routes.post('/iniciativas/:iniciativaId/dispendios', dispendioController.criarDispendio);
 
 module.exports = routes;
