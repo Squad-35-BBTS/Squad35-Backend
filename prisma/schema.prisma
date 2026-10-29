@@ -8,64 +8,92 @@ generator client {
 }
 
 model Usuario {
-  id_usuario      Int          @id @default(autoincrement())
-  nome            String
-  email           String       @unique
-  senha           String
-  perfil          String       @default("Analista P&D")
-  iniciativas     Iniciativa[] @relation("UsuarioResponsavel")
+  id_usuario  Int          @id @default(autoincrement())
+  nome        String
+  email       String       @unique
+  senha       String
+  perfil      String       @default("Analista P&D")
+  iniciativas Iniciativa[] @relation("UsuarioResponsavel")
 
   @@map("usuario")
 }
 
 model Iniciativa {
-  id_iniciativa          Int          @id @default(autoincrement())
-  codigo                 String       @unique
-  nome                   String
-  descricao              String?      @db.Text
-  classificacao_pd       String
-  score_trl              Int
-  elegibilidade_pct      Decimal      @db.Decimal(5, 2)
-  risco_glosa            String
-  barreira_incerteza     String?      @db.Text
-  cnae                   String?
-  data_inicio            DateTime?    @db.Date
-  data_fim               DateTime?    @db.Date
-  status                 String       @default("Em Avaliação")
-  criado_em              DateTime     @default(now())
-  atualizado_em          DateTime     @updatedAt
-  
-  usuario_responsavel_id Int
-  usuario_responsavel    Usuario      @relation("UsuarioResponsavel", fields: [usuario_responsavel_id], references: [id_usuario])
-  
-  marcos                 MarcoExperimento[]
-  dispendios             Dispendio[]
-  timesheets             Timesheet[]
+  id_iniciativa      Int     @id @default(autoincrement())
+  codigo             String  @unique
+  nome               String
+  descricao          String? @db.Text
+  classificacao_pd   String
+  score_trl          Int
+  elegibilidade_pct  Decimal @db.Decimal(5, 2)
+  risco_glosa        String
+  barreira_incerteza String? @db.Text
+  cnae               String?
 
+  data_inicio   DateTime? @db.Date
+  data_fim      DateTime? @db.Date
+  status        String    @default("Em Avaliação")
+  criado_em     DateTime  @default(now())
+  atualizado_em DateTime  @updatedAt
+
+  usuario_responsavel_id Int
+  usuario_responsavel    Usuario @relation("UsuarioResponsavel", fields: [usuario_responsavel_id], references: [id_usuario])
+
+  ano_base           Int?
+  diretoria          String @default("Não informada")
+  gerencia           String @default("Não informada")
+  trilha_tecnologica String @default("Não classificada")
+  tipo_inovacao      String @default("Tecnológica")
+
+  trl_inicial     Int      @default(1)
+  risco_glosa_pct Decimal? @db.Decimal(5, 2)
+  orcamento       Decimal  @default(0) @db.Decimal(12, 2)
+
+  revisao        Int       @default(1)
+  status_dossie  String    @default("Aberto")
+  fechado_em     DateTime?
+  fechado_por_id Int?
+
+  marcos     MarcoExperimento[]
+  dispendios Dispendio[]
+  timesheets Timesheet[]
+  pareceres  ParecerTecnico[]
+  alertas    Alerta[]
+
+  @@index([ano_base, diretoria, status])
+  @@index([score_trl, risco_glosa])
   @@map("iniciativa")
 }
 
 model MarcoExperimento {
-  id_marco         Int        @id @default(autoincrement())
-  iniciativa_id    Int
-  iniciativa       Iniciativa @relation(fields: [iniciativa_id], references: [id_iniciativa], onDelete: Cascade)
-  titulo           String
-  periodo          String
-  descricao        String     @db.Text
-  status_validacao String     @default("Validado")
-  hash_evidencia   String?
-  tamanho_arquivo  String?
+  id_marco      Int        @id @default(autoincrement())
+  iniciativa_id Int
+  iniciativa    Iniciativa @relation(fields: [iniciativa_id], references: [id_iniciativa], onDelete: Cascade)
+
+  titulo    String
+  periodo   String
+  descricao String @db.Text
+
+  status_validacao String    @default("Pendente")
+  validado_em      DateTime?
+  validado_por_id  Int?
+
+  hash_evidencia  String?
+  tamanho_arquivo String?
+
+  evidencias Evidencia[]
 
   @@map("marco_experimento")
 }
 
 model Dispendio {
-  id_dispendio            Int        @id @default(autoincrement())
-  iniciativa_id           Int
-  iniciativa              Iniciativa @relation(fields: [iniciativa_id], references: [id_iniciativa], onDelete: Cascade)
-  descricao               String     @db.Text
-  valor                   Decimal    @db.Decimal(12, 2)
-  data                    DateTime   @db.Date
+  id_dispendio  Int        @id @default(autoincrement())
+  iniciativa_id Int
+  iniciativa    Iniciativa @relation(fields: [iniciativa_id], references: [id_iniciativa], onDelete: Cascade)
+
+  descricao               String   @db.Text
+  valor                   Decimal  @db.Decimal(12, 2)
+  data                    DateTime @db.Date
   categoria               String
   documento_comprobatorio String?
 
@@ -73,17 +101,91 @@ model Dispendio {
 }
 
 model Timesheet {
-  id_timesheet     Int        @id @default(autoincrement())
+  id_timesheet     Int    @id @default(autoincrement())
   colaborador_id   String
   colaborador_nome String
   cargo_regime     String
-  iniciativa_id    Int
-  iniciativa       Iniciativa @relation(fields: [iniciativa_id], references: [id_iniciativa], onDelete: Cascade)
-  data             DateTime   @db.Date
-  horas_mes        Int
-  elegivel_pct     Decimal    @db.Decimal(5, 2)
-  custo_apropriado Decimal    @db.Decimal(10, 2)
-  status           String     @default("Aprovado pelo Gestor")
+
+  iniciativa_id Int
+  iniciativa    Iniciativa @relation(fields: [iniciativa_id], references: [id_iniciativa], onDelete: Cascade)
+
+  data             DateTime @db.Date
+  horas_mes        Decimal  @db.Decimal(6, 2)
+  elegivel_pct     Decimal  @db.Decimal(5, 2)
+  custo_apropriado Decimal  @db.Decimal(12, 2)
+
+  justificativa   String?   @db.Text
+  status          String    @default("Pendente")
+  aprovado_em     DateTime?
+  aprovado_por_id Int?
 
   @@map("timesheet")
+}
+
+model Evidencia {
+  id_evidencia Int              @id @default(autoincrement())
+  marco_id     Int
+  marco        MarcoExperimento @relation(fields: [marco_id], references: [id_marco], onDelete: Restrict)
+
+  nome          String
+  mime_type     String @default("application/octet-stream")
+  tamanho_bytes Int
+  sha256        String @db.Char(64)
+  conteudo      Bytes  @db.LongBlob
+
+  status          String    @default("Pendente")
+  criado_em       DateTime  @default(now())
+  validado_em     DateTime?
+  validado_por_id Int?
+
+  @@index([marco_id])
+  @@map("evidencia")
+}
+
+model ParecerTecnico {
+  id_parecer    Int        @id @default(autoincrement())
+  iniciativa_id Int
+  iniciativa    Iniciativa @relation(fields: [iniciativa_id], references: [id_iniciativa], onDelete: Restrict)
+
+  autor_id        Int
+  revisao_projeto Int
+  conteudo        String   @db.Text
+  conclusao       String
+  criado_em       DateTime @default(now())
+
+  @@index([iniciativa_id])
+  @@map("parecer_tecnico")
+}
+
+model Alerta {
+  id_alerta     Int        @id @default(autoincrement())
+  iniciativa_id Int
+  iniciativa    Iniciativa @relation(fields: [iniciativa_id], references: [id_iniciativa], onDelete: Restrict)
+
+  titulo         String
+  descricao      String    @db.Text
+  severidade     String
+  prazo          DateTime? @db.Date
+  responsavel_id Int
+
+  status           String    @default("Aberto")
+  resolucao        String?   @db.Text
+  criado_em        DateTime  @default(now())
+  resolvido_em     DateTime?
+  resolvido_por_id Int?
+
+  @@index([iniciativa_id, status])
+  @@map("alerta")
+}
+
+model Auditoria {
+  id_auditoria Int      @id @default(autoincrement())
+  usuario_id   Int
+  acao         String
+  entidade     String
+  registro_id  String
+  criado_em    DateTime @default(now())
+
+  @@index([entidade, registro_id])
+  @@map("auditoria")
 }

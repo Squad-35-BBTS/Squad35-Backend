@@ -1,33 +1,77 @@
-const jwt = require('jsonwebtoken');
-const JWT_SECRET = process.env.JWT_SECRET || 'sga_lb_secret_key_bbts_2026';
+const jwt = require("jsonwebtoken");
+const prisma = require("../services/prisma");
 
-module.exports = function(req, res, next) {
-  const authHeader = req.headers.authorization;
+module.exports = async function authMiddleware(req, res, next) {
+  const authorization = req.headers.authorization || "";
+  const resultado = /^Bearer ([^\s]+)$/i.exec(authorization);
 
-  if (!authHeader) {
-    return res.status(401).json({ error: 'Token de autenticação não fornecido.' });
+  if (!resultado) {
+    return res.status(401).json({
+      error: "Informe o token no formato Bearer TOKEN.",
+    });
   }
 
-  // O formato do header é "Bearer [token]"
-  const parts = authHeader.split(' ');
-  if (parts.length !== 2) {
-    return res.status(401).json({ error: 'Erro no formato do token.' });
+  const segredo = process.env.JWT_SECRET;
+
+  if (!segredo || segredo.length < 32) {
+    return next(
+      new Error("JWT_SECRET não foi configurado corretamente.")
+    );
   }
 
-  const [scheme, token] = parts;
-  if (!/^Bearer$/i.test(scheme)) {
-    return res.status(401).json({ error: 'Token mal formatado.' });
-  }
+  try {
+    const payload = jwt.verify(resultado[1], segredo, {
+      algorithms: ["HS256"],
+    });
 
-  jwt.verify(token, JWT_SECRET, (err, decoded) => {
-    if (err) {
-      return res.status(401).json({ error: 'Token inválido ou expirado.' });
+    if (
+      !Number.isInteger(payload.id_usuario) ||
+      payload.id_usuario <= 0
+    ) {
+      return res.status(401).json({
+        error: "Token inválido.",
+      });
     }
 
-    // Guarda os dados do utilizador na requisição para uso futuro
-    req.usuarioId = decoded.id_usuario;
-    req.usuarioPerfil = decoded.perfil;
-    
+    const usuario = await prisma.usuario.findUnique({
+      where: {
+        id_usuario: payload.id_usuario,
+      },
+      select: {
+        id_usuario: true,
+        nome: true,
+        email: true,
+        perfil: true,
+      },
+    });
+
+    if (!usuario) {
+      return res.status(401).json({
+        error: "Usuário não encontrado.",
+      });
+    }
+
+    // Mantém compatibilidade com os controllers atuais.
+    req.usuarioId = usuario.id_usuario;
+    req.usuarioPerfil = usuario.perfil;
+
+    // Disponibiliza somente os dados públicos do usuário.
+    req.usuario = usuario;
+
     return next();
-  });
+  } catch (error) {
+    const errosDeToken = [
+      "JsonWebTokenError",
+      "TokenExpiredError",
+      "NotBeforeError",
+    ];
+
+    if (errosDeToken.includes(error.name)) {
+      return res.status(401).json({
+        error: "Token inválido ou expirado.",
+      });
+    }
+
+    return next(error);
+  }
 };
