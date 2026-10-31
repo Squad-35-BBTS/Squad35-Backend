@@ -6,12 +6,13 @@ const marcoController = require("./controllers/marcoController");
 const dispendioController = require("./controllers/dispendioController");
 const timesheetController = require("./controllers/timesheetController");
 const governancaController = require("./controllers/governancaController");
+const integracaoController = require("./controllers/integracaoController");
 
 const authMiddleware = require("./Middleware/authMiddleware");
 
 const routes = Router();
 
-// ROTAS PÚBLICAS
+// PÚBLICAS
 
 routes.post("/auth/register", authController.register);
 routes.post("/auth/login", authController.login);
@@ -29,6 +30,12 @@ routes.get(
 // AUTENTICAÇÃO
 
 routes.use(authMiddleware);
+
+// USUÁRIO E AUDITORIA
+
+routes.get("/auth/me", integracaoController.me);
+routes.get("/usuarios", integracaoController.usuarios);
+routes.get("/auditoria", integracaoController.auditoria);
 
 // DASHBOARD
 
@@ -149,10 +156,7 @@ routes.post(
 
 // ALERTAS
 
-routes.get(
-  "/alertas",
-  governancaController.listarAlertas
-);
+routes.get("/alertas", governancaController.listarAlertas);
 
 routes.post(
   "/iniciativas/:iniciativaId/alertas",
