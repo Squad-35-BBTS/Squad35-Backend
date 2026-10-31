@@ -8,12 +8,14 @@ generator client {
 }
 
 model Usuario {
-  id_usuario  Int          @id @default(autoincrement())
-  nome        String
-  email       String       @unique
-  senha       String
-  perfil      String       @default("Analista P&D")
-  iniciativas Iniciativa[] @relation("UsuarioResponsavel")
+  id_usuario   Int                @id @default(autoincrement())
+  nome         String
+  email        String             @unique
+  senha        String
+  versao_token Int                @default(0)
+  perfil       String             @default("Analista P&D")
+  iniciativas  Iniciativa[]       @relation("UsuarioResponsavel")
+  recuperacoes RecuperacaoSenha[]
 
   @@map("usuario")
 }
@@ -188,4 +190,20 @@ model Auditoria {
 
   @@index([entidade, registro_id])
   @@map("auditoria")
+}
+
+model RecuperacaoSenha {
+  token_hash String  @id @db.Char(64)
+  usuario_id Int
+  usuario    Usuario @relation(fields: [usuario_id], references: [id_usuario], onDelete: Cascade)
+
+  email        String
+  versao_token Int
+  expira_em    DateTime
+  utilizado_em DateTime?
+  criado_em    DateTime  @default(now())
+
+  @@index([usuario_id])
+  @@index([expira_em])
+  @@map("recuperacao_senha")
 }

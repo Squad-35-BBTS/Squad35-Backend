@@ -158,6 +158,7 @@ module.exports = {
       const token = jwt.sign(
         {
           id_usuario: usuario.id_usuario,
+          versao_token: usuario.versao_token ?? 0,
         },
         obterSegredo(),
         {

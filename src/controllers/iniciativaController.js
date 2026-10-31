@@ -363,6 +363,17 @@ function filtros(query) {
 }
 
 function tratarErro(error, res, next) {
+  if (axios.isAxiosError(error)) {
+    const externo = error.response?.status;
+    const timeout = ['ECONNABORTED', 'ETIMEDOUT'].includes(error.code);
+    const status = externo === 404 ? 404 : externo === 429 ? 429 : timeout ? 504 : 502;
+    const mensagem = externo === 404
+      ? 'CNPJ ou repositório não encontrado no serviço externo.'
+      : externo === 429 ? 'Limite de consultas externas atingido. Tente novamente mais tarde.'
+      : timeout ? 'O serviço externo demorou para responder. Tente novamente.'
+      : 'Não foi possível consultar o serviço externo. Tente novamente mais tarde.';
+    return res.status(status).json({ error: mensagem });
+  }
   const status =
     error.status ||
     {

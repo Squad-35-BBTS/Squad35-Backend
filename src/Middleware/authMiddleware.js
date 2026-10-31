@@ -42,6 +42,7 @@ module.exports = async function authMiddleware(req, res, next) {
         nome: true,
         email: true,
         perfil: true,
+        versao_token: true,
       },
     });
 
@@ -51,12 +52,24 @@ module.exports = async function authMiddleware(req, res, next) {
       });
     }
 
+    const versao = payload.versao_token ?? 0;
+    if (!Number.isInteger(versao) || versao !== (usuario.versao_token ?? 0)) {
+      return res.status(401).json({
+        error: "A sessão foi encerrada. Entre novamente.",
+      });
+    }
+
     // Mantém compatibilidade com os controllers atuais.
     req.usuarioId = usuario.id_usuario;
     req.usuarioPerfil = usuario.perfil;
 
     // Disponibiliza somente os dados públicos do usuário.
-    req.usuario = usuario;
+    req.usuario = {
+      id_usuario: usuario.id_usuario,
+      nome: usuario.nome,
+      email: usuario.email,
+      perfil: usuario.perfil,
+    };
 
     return next();
   } catch (error) {

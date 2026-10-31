@@ -125,3 +125,13 @@ test("tabela de auditoria está disponível", async () => {
 
   assert.ok(Array.isArray(resultado));
 });
+test('usuário possui versão de token para invalidar sessões', async () => {
+  const usuarios = await prisma.usuario.findMany({
+    take: 1,
+    select: { id_usuario: true, versao_token: true },
+  });
+  for (const usuario of usuarios) {
+    assert.ok(Number.isInteger(usuario.versao_token));
+    assert.ok(usuario.versao_token >= 0);
+  }
+});
