@@ -1,6 +1,7 @@
 datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 generator client {
@@ -21,15 +22,14 @@ model Usuario {
 }
 
 model Iniciativa {
-  id_iniciativa     Int     @id @default(autoincrement())
-  codigo            String  @unique
-  nome              String
-  descricao         String? @db.Text
-  classificacao_pd  String
-  score_trl         Int
-  elegibilidade_pct Decimal @db.Decimal(5, 2)
-  risco_glosa       String
-
+  id_iniciativa      Int     @id @default(autoincrement())
+  codigo             String  @unique
+  nome               String
+  descricao          String? @db.Text
+  classificacao_pd   String
+  score_trl          Int
+  elegibilidade_pct  Decimal @db.Decimal(5, 2)
+  risco_glosa        String
   barreira_incerteza String? @db.Text
   cnae               String?
 
@@ -135,7 +135,7 @@ model Evidencia {
   mime_type     String @default("application/octet-stream")
   tamanho_bytes Int
   sha256        String @db.Char(64)
-  conteudo      Bytes  @db.LongBlob
+  conteudo      Bytes  @db.ByteA
 
   status          String    @default("Pendente")
   criado_em       DateTime  @default(now())
@@ -203,7 +203,7 @@ model RecuperacaoSenha {
   versao_token Int
   expira_em    DateTime
   utilizado_em DateTime?
-  criado_em    DateTime  @default(now())
+  criado_em    DateTime @default(now())
 
   @@index([usuario_id])
   @@index([expira_em])
@@ -221,13 +221,12 @@ model DossieAnual {
 }
 
 model PreparacaoFormpd {
-  iniciativa_id Int        @id
-  iniciativa    Iniciativa @relation(fields: [iniciativa_id], references: [id_iniciativa], onDelete: Restrict)
-
+  iniciativa_id     Int        @id
+  iniciativa        Iniciativa @relation(fields: [iniciativa_id], references: [id_iniciativa], onDelete: Restrict)
   ano_base          Int
   dados             Json
-  revisao           Int      @default(1)
-  atualizado_em     DateTime @updatedAt
+  revisao           Int        @default(1)
+  atualizado_em     DateTime   @updatedAt
   atualizado_por_id Int
 
   @@map("preparacao_formpd")
