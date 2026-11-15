@@ -13,6 +13,18 @@ if (
   );
 }
 
+const PORT = Number(process.env.PORT || 3300);
+
+if (
+  !Number.isInteger(PORT) ||
+  PORT < 1 ||
+  PORT > 65535
+) {
+  throw new Error(
+    "Configure PORT com um número inteiro entre 1 e 65535."
+  );
+}
+
 // Importar depois de carregar e validar as variáveis de ambiente.
 const routes = require("./routes");
 
@@ -42,7 +54,11 @@ app.use(
 
 app.use(express.json({ limit: "8mb" }));
 
+// Confirma que o servidor está respondendo.
+// A conexão com o banco deve ser verificada separadamente.
 app.get("/health", (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+
   return res.status(200).json({
     status: "ok",
     servico: "Squad35 Backend",
@@ -74,6 +90,7 @@ app.use((error, req, res, next) => {
     });
   }
 
+  // Evita expor detalhes internos na resposta.
   console.error("Erro não tratado:", error.name);
 
   return res.status(500).json({
@@ -81,10 +98,9 @@ app.use((error, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 3300;
-
+// Inicia o servidor apenas quando este arquivo é executado diretamente.
 if (require.main === module) {
-  app.listen(PORT, () => {
+  app.listen(PORT, "0.0.0.0", () => {
     console.log(`Servidor rodando na porta ${PORT}`);
   });
 }

@@ -21,14 +21,15 @@ model Usuario {
 }
 
 model Iniciativa {
-  id_iniciativa      Int     @id @default(autoincrement())
-  codigo             String  @unique
-  nome               String
-  descricao          String? @db.Text
-  classificacao_pd   String
-  score_trl          Int
-  elegibilidade_pct  Decimal @db.Decimal(5, 2)
-  risco_glosa        String
+  id_iniciativa     Int     @id @default(autoincrement())
+  codigo            String  @unique
+  nome              String
+  descricao         String? @db.Text
+  classificacao_pd  String
+  score_trl         Int
+  elegibilidade_pct Decimal @db.Decimal(5, 2)
+  risco_glosa       String
+
   barreira_incerteza String? @db.Text
   cnae               String?
 
@@ -56,11 +57,12 @@ model Iniciativa {
   fechado_em     DateTime?
   fechado_por_id Int?
 
-  marcos     MarcoExperimento[]
-  dispendios Dispendio[]
-  timesheets Timesheet[]
-  pareceres  ParecerTecnico[]
-  alertas    Alerta[]
+  marcos            MarcoExperimento[]
+  dispendios        Dispendio[]
+  timesheets        Timesheet[]
+  pareceres         ParecerTecnico[]
+  alertas           Alerta[]
+  preparacao_formpd PreparacaoFormpd?
 
   @@index([ano_base, diretoria, status])
   @@index([score_trl, risco_glosa])
@@ -206,4 +208,27 @@ model RecuperacaoSenha {
   @@index([usuario_id])
   @@index([expira_em])
   @@map("recuperacao_senha")
+}
+
+model DossieAnual {
+  ano_base          Int      @id
+  dados             Json
+  revisao           Int      @default(1)
+  atualizado_em     DateTime @updatedAt
+  atualizado_por_id Int
+
+  @@map("dossie_anual")
+}
+
+model PreparacaoFormpd {
+  iniciativa_id Int        @id
+  iniciativa    Iniciativa @relation(fields: [iniciativa_id], references: [id_iniciativa], onDelete: Restrict)
+
+  ano_base          Int
+  dados             Json
+  revisao           Int      @default(1)
+  atualizado_em     DateTime @updatedAt
+  atualizado_por_id Int
+
+  @@map("preparacao_formpd")
 }

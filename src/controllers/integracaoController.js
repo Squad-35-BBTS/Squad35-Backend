@@ -8,63 +8,114 @@ module.exports = {
     });
   },
 
-  usuarios: f.executar(async (_req, res) => {
-    const usuarios = await prisma.usuario.findMany({
-      select: {
-        id_usuario: true,
-        nome: true,
-        email: true,
-        perfil: true,
-      },
-      orderBy: {
-        nome: "asc",
-      },
-    });
+  usuarios: f.executar(
+    async (_req, res) => {
+      const usuarios =
+        await prisma.usuario.findMany({
+          select: {
+            id_usuario: true,
+            nome: true,
+            email: true,
+            perfil: true,
+          },
 
-    return res.json(usuarios);
-  }),
+          orderBy: {
+            nome: "asc",
+          },
+        });
 
-  auditoria: f.executar(async (req, res) => {
-    f.exigirGestor(req);
-
-    if (Object.keys(req.query).length) {
-      f.campos(req.query, ["pagina", "limite"]);
+      return res.json(usuarios);
     }
+  ),
 
-    const pagina =
-      req.query.pagina === undefined
-        ? 1
-        : f.id(req.query.pagina);
+  auditoria: f.executar(
+    async (req, res) => {
+      f.exigirGestor(req);
 
-    const limite =
-      req.query.limite === undefined
-        ? 20
-        : f.id(req.query.limite);
+      if (
+        Object.keys(req.query).length
+      ) {
+        f.campos(req.query, [
+          "pagina",
+          "limite",
+          "acao",
+          "entidade",
+        ]);
+      }
 
-    if (pagina > 100000 || limite > 100) {
-      f.erro(400, "Página ou limite inválido.");
+      const pagina =
+        req.query.pagina === undefined
+          ? 1
+          : f.id(req.query.pagina);
+
+      const limite =
+        req.query.limite === undefined
+          ? 20
+          : f.id(req.query.limite);
+
+      if (
+        pagina > 100000 ||
+        limite > 100
+      ) {
+        f.erro(
+          400,
+          "Página ou limite inválido."
+        );
+      }
+
+      const where = {};
+
+      for (const campo of [
+        "acao",
+        "entidade",
+      ]) {
+        if (
+          req.query[campo] !== undefined
+        ) {
+          where[campo] = f.texto(
+            req.query[campo],
+            campo,
+            100
+          );
+        }
+      }
+
+      const resultado =
+        await prisma.$transaction(
+          async (db) => ({
+            dados:
+              await db.auditoria.findMany({
+                where,
+
+                skip:
+                  (pagina - 1) * limite,
+
+                take: limite,
+
+                orderBy: {
+                  id_auditoria: "desc",
+                },
+              }),
+
+            paginacao: {
+              pagina,
+              limite,
+
+              total:
+                await db.auditoria.count({
+                  where,
+                }),
+            },
+          })
+        );
+
+      resultado.paginacao.total_paginas =
+        Math.ceil(
+          resultado.paginacao.total /
+          limite
+        );
+
+      return res.json(resultado);
     }
-
-    const resultado = await prisma.$transaction(async (db) => ({
-      dados: await db.auditoria.findMany({
-        skip: (pagina - 1) * limite,
-        take: limite,
-        orderBy: {
-          id_auditoria: "desc",
-        },
-      }),
-
-      paginacao: {
-        pagina,
-        limite,
-        total: await db.auditoria.count(),
-      },
-    }));
-
-    resultado.paginacao.total_paginas = Math.ceil(
-      resultado.paginacao.total / limite
-    );
-
-    return res.json(resultado);
-  }),
+  ),
 };
