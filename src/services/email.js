@@ -19,16 +19,15 @@ function configuracao() {
     "[::1]",
   ].includes(base.hostname);
 
-  const protocoloPermitido =
-    base.protocol === "https:" ||
-    (
-      local &&
-      base.protocol === "http:" &&
-      process.env.NODE_ENV !== "production"
-    );
-
   if (
-    !protocoloPermitido ||
+    (
+      base.protocol !== "https:" &&
+      !(
+        local &&
+        base.protocol === "http:" &&
+        process.env.NODE_ENV !== "production"
+      )
+    ) ||
     base.username ||
     base.password ||
     base.search ||
@@ -44,9 +43,7 @@ function configuracao() {
     throw new Error("EMAIL_CONFIG");
   }
 
-  if (provider === "brevo") {
-    const key = process.env.BREVO_API_KEY?.trim();
-
+  if (provider === "mailjet" || provider === "brevo") {
     const match = from.trim().match(
       /^(?:([^<>]+)\s*<([^<>]+)>|([^<>]+))$/
     );
@@ -61,18 +58,46 @@ function configuracao() {
       "SGA — Lei do Bem"
     ).trim();
 
-    const emailValido =
-      /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(
-        senderEmail
-      );
-
     if (
-      !key ||
-      /\s/.test(key) ||
-      !emailValido ||
+      !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(
+        senderEmail
+      ) ||
       !senderName ||
       /[\r\n]/.test(senderName)
     ) {
+      throw new Error("EMAIL_CONFIG");
+    }
+
+    if (provider === "mailjet") {
+      const key = process.env.MAILJET_API_KEY?.trim();
+      const secret =
+        process.env.MAILJET_SECRET_KEY?.trim();
+
+      if (
+        !key ||
+        !secret ||
+        /[\s:]/.test(key) ||
+        /\s/.test(secret)
+      ) {
+        throw new Error("EMAIL_CONFIG");
+      }
+
+      return {
+        provider,
+        base,
+        from,
+        key,
+        secret,
+        sender: {
+          Email: senderEmail,
+          Name: senderName,
+        },
+      };
+    }
+
+    const key = process.env.BREVO_API_KEY?.trim();
+
+    if (!key || /\s/.test(key)) {
       throw new Error("EMAIL_CONFIG");
     }
 
@@ -82,8 +107,8 @@ function configuracao() {
       from,
       key,
       sender: {
-        name: senderName,
         email: senderEmail,
+        name: senderName,
       },
     };
   }
@@ -95,12 +120,7 @@ function configuracao() {
       throw new Error("EMAIL_CONFIG");
     }
 
-    return {
-      provider,
-      base,
-      from,
-      key,
-    };
+    return { provider, base, from, key };
   }
 
   if (provider !== "smtp") {
@@ -162,10 +182,68 @@ async function enviarRecuperacao({ email, token }) {
       "Acesse o link abaixo em até 15 minutos:",
       link.href,
       "",
-      "Se você não solicitou, ignore esta mensagem. Sua senha continua a mesma.",
+      "Se você não solicitou, ignore esta mensagem.",
+      "Sua senha continua a mesma.",
       "Não compartilhe este link.",
     ].join("\n"),
   };
+
+  if (config.provider === "mailjet") {
+    try {
+      const authorization = Buffer.from(
+        `${config.key}:${config.secret}`
+      ).toString("base64");
+
+      const response = await fetch(
+        "https://api.mailjet.com/v3.1/send",
+        {
+          method: "POST",
+          signal: AbortSignal.timeout(15000),
+          headers: {
+            Authorization: `Basic ${authorization}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            Messages: [
+              {
+                From: config.sender,
+                To: [{ Email: email }],
+                Subject: message.subject,
+                TextPart: message.text,
+              },
+            ],
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        console.error(
+          "Falha na API de e-mail: Mailjet, HTTP",
+          response.status
+        );
+
+        throw new Error("EMAIL_SEND");
+      }
+
+      const result = await response.json();
+
+      if (
+        !Array.isArray(result.Messages) ||
+        result.Messages.length !== 1 ||
+        result.Messages[0].Status !== "success"
+      ) {
+        console.error(
+          "Mailjet não aceitou a mensagem de recuperação."
+        );
+
+        throw new Error("EMAIL_SEND");
+      }
+    } catch {
+      throw new Error("EMAIL_SEND");
+    }
+
+    return;
+  }
 
   if (config.provider === "brevo") {
     try {
@@ -189,7 +267,6 @@ async function enviarRecuperacao({ email, token }) {
       );
 
       if (!response.ok) {
-        // Registra somente o status, sem chave ou dados pessoais.
         console.error(
           "Falha na API de e-mail: Brevo, HTTP",
           response.status
