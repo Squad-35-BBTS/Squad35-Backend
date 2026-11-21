@@ -1,7 +1,9 @@
 const nodemailer = require("nodemailer");
 
 function configuracao() {
-  const provider = process.env.EMAIL_PROVIDER || "smtp";
+  const provider = (
+    process.env.EMAIL_PROVIDER || "smtp"
+  ).trim().toLowerCase();
 
   let base;
 
@@ -43,7 +45,7 @@ function configuracao() {
   }
 
   if (provider === "brevo") {
-    const key = process.env.BREVO_API_KEY;
+    const key = process.env.BREVO_API_KEY?.trim();
 
     const match = from.trim().match(
       /^(?:([^<>]+)\s*<([^<>]+)>|([^<>]+))$/
@@ -59,10 +61,15 @@ function configuracao() {
       "SGA — Lei do Bem"
     ).trim();
 
+    const emailValido =
+      /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(
+        senderEmail
+      );
+
     if (
       !key ||
       /\s/.test(key) ||
-      !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(senderEmail) ||
+      !emailValido ||
       !senderName ||
       /[\r\n]/.test(senderName)
     ) {
@@ -88,7 +95,12 @@ function configuracao() {
       throw new Error("EMAIL_CONFIG");
     }
 
-    return { provider, base, from, key };
+    return {
+      provider,
+      base,
+      from,
+      key,
+    };
   }
 
   if (provider !== "smtp") {
@@ -177,10 +189,15 @@ async function enviarRecuperacao({ email, token }) {
       );
 
       if (!response.ok) {
+        // Registra somente o status, sem chave ou dados pessoais.
+        console.error(
+          "Falha na API de e-mail: Brevo, HTTP",
+          response.status
+        );
+
         throw new Error("EMAIL_SEND");
       }
     } catch {
-      // Não expor credenciais ou respostas externas.
       throw new Error("EMAIL_SEND");
     }
 
