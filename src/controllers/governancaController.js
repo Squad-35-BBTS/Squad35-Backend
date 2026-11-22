@@ -1,4 +1,5 @@
 const f = require("../utils/financeiro");
+const { etapasPendentes } = require("../services/progressoProjeto");
 
 const detalhe = {
   usuario_responsavel: {
@@ -595,6 +596,7 @@ module.exports = {
         },
         data: {
           status_dossie: "Aberto",
+          ...(p.status === "Concluído" ? { status: "Em Apuração" } : {}),
           fechado_em: null,
           fechado_por_id: null,
           revisao: {
@@ -622,6 +624,37 @@ module.exports = {
         p.id_iniciativa
       );
 
+      return atualizado;
+    });
+
+    return res.json(resultado);
+  }),
+
+  finalizarProjeto: f.executar(async (req, res) => {
+    f.exigirGestor(req);
+
+    const resultado = await f.transacao(async (db) => {
+      const p = await carregar(db, req.params.iniciativaId);
+
+      if (p.status === "Concluído") {
+        f.erro(409, "Projeto já finalizado.");
+      }
+
+      const etapas = etapasPendentes(p);
+      if (etapas.length) {
+        f.erro(409, `Conclua as cinco etapas antes de finalizar: ${etapas.join(", ")}.`);
+      }
+
+      const lista = pendencias(p);
+      if (lista.length) f.erro(409, lista.join(" | "));
+
+      const atualizado = await db.iniciativa.update({
+        where: { id_iniciativa: p.id_iniciativa },
+        data: { status: "Concluído" },
+      });
+
+      // Não altera a revisão técnica nem invalida o parecer que fechou o dossiê.
+      await log(db, req, "FINALIZAR_PROJETO", "Iniciativa", p.id_iniciativa);
       return atualizado;
     });
 

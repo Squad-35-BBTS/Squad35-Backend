@@ -212,6 +212,10 @@ function validarProjeto(body, parcial = false) {
     permitidos
   );
 
+  if (body.status === "Concluído") {
+    erro(400, "Use Finalizar projeto após concluir as cinco etapas.");
+  }
+
   if (!parcial) {
     const obrigatorios = [
       "codigo",

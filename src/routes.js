@@ -98,5 +98,6 @@ routes.post("/alertas/:alertaId/resolver", governancaController.resolverAlerta);
 routes.get("/iniciativas/:iniciativaId/dossie", governancaController.consultarDossie);
 routes.post("/iniciativas/:iniciativaId/dossie/fechar", governancaController.fecharDossie);
 routes.post("/iniciativas/:iniciativaId/dossie/reabrir", governancaController.reabrirDossie);
+routes.post("/iniciativas/:iniciativaId/finalizar", governancaController.finalizarProjeto);
 
 module.exports = routes;
