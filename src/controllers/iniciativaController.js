@@ -353,7 +353,18 @@ function validarProjeto(body, parcial = false) {
   return resultado;
 }
 
-function validarPeriodo(projeto) {
+function validarCoerencia(projeto) {
+  if (
+    projeto.trl_inicial !== undefined &&
+    projeto.score_trl !== undefined &&
+    projeto.trl_inicial > projeto.score_trl
+  ) {
+    erro(
+      400,
+      "O TRL atual deve ser maior ou igual ao TRL inicial."
+    );
+  }
+
   if (
     projeto.data_inicio &&
     projeto.data_fim &&
@@ -673,7 +684,7 @@ module.exports = {
     const dados =
       validarProjeto(req.body);
 
-    validarPeriodo(dados);
+    validarCoerencia(dados);
 
     const projeto = await transacao(
       async (db) => {
@@ -815,7 +826,7 @@ module.exports = {
             projetoId
           );
 
-        validarPeriodo({
+        validarCoerencia({
           ...anterior,
           ...dados,
         });
