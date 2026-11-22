@@ -552,6 +552,7 @@ function seguro(item, consultoria) {
   const dados = item?.dados || {};
 
   return {
+    ano_base: item?.ano_base ?? null,
     revisao: item?.revisao || 0,
 
     atualizado_em:

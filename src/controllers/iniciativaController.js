@@ -1,5 +1,6 @@
 const prisma = require("../services/prisma");
 const axios = require("axios");
+const { cnpjValido } = require("../services/preparacaoFormpd");
 const valores = require("../utils/valoresExatos");
 
 const usuarioPublico = {
@@ -1178,6 +1179,10 @@ module.exports = {
           400,
           "Informe um CNPJ com 14 dígitos."
         );
+      }
+
+      if (!cnpjValido(cnpj)) {
+        erro(400, "CNPJ inválido. Confira os dígitos informados.");
       }
 
       const { data } =
